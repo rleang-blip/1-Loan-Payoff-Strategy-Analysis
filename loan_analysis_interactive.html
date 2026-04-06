@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>วิเคราะห์การปิดหนี้สินเชื่อบ้าน (Interactive)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; }
+
+  .header { background: linear-gradient(135deg, #1a365d 0%, #2d6a9f 100%); color: white; padding: 28px 40px; }
+  .header h1 { font-size: 1.7rem; font-weight: 700; margin-bottom: 4px; }
+  .header p { font-size: 0.88rem; opacity: 0.75; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 28px 20px; }
+
+  /* ─── INPUT PANEL ─── */
+  .input-panel {
+    background: white; border-radius: 14px; padding: 24px 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10); margin-bottom: 28px;
+    border: 2px solid #bee3f8;
+  }
+  .input-panel-title {
+    font-size: 1rem; font-weight: 700; color: #2b6cb0; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .input-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .input-group { }
+  .input-group-title { font-size: 0.78rem; font-weight: 700; color: #718096; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; }
+  .input-group-title.l1 { border-color: #38a169; color: #276749; }
+  .input-group-title.misc { border-color: #805ad5; color: #553c9a; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 0.8rem; color: #4a5568; font-weight: 600; margin-bottom: 4px; }
+  .field input {
+    width: 100%; padding: 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px;
+    font-size: 0.9rem; color: #1a202c; background: #f7fafc; transition: border 0.2s;
+    font-family: inherit;
+  }
+  .field input:focus { outline: none; border-color: #4299e1; background: white; }
+  .field .hint { font-size: 0.72rem; color: #a0aec0; margin-top: 3px; }
+
+  .calc-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, #2d6a9f, #38b2ac); color: white;
+    border: none; border-radius: 10px; padding: 12px 32px; font-size: 1rem;
+    font-weight: 700; cursor: pointer; margin-top: 20px; transition: opacity 0.2s;
+    font-family: inherit; width: 100%;
+  }
+  .calc-btn:hover { opacity: 0.88; }
+
+  /* ─── KPI ─── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  .kpi { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); border-top: 4px solid #2d6a9f; }
+  .kpi.loan1 { border-top-color: #38a169; }
+  .kpi.total { border-top-color: #805ad5; }
+  .kpi.budget { border-top-color: #dd6b20; }
+  .kpi-label { font-size: 0.72rem; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .kpi-value { font-size: 1.45rem; font-weight: 800; margin: 5px 0 2px; color: #1a202c; }
+  .kpi-sub { font-size: 0.75rem; color: #718096; }
+
+  /* ─── Info box ─── */
+  .info-box { background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; }
+  .info-box strong { color: #276749; }
+  .info-box p { font-size: 0.84rem; color: #22543d; margin-top: 5px; line-height: 1.6; }
+
+  /* ─── Summary box ─── */
+  .summary-box { background: linear-gradient(135deg, #e6fffa 0%, #ebf8ff 100%);
+    border: 2px solid #38b2ac; border-radius: 14px; padding: 20px 24px; margin-bottom: 24px; }
+  .summary-box h2 { color: #2c7a7b; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .summary-box p { font-size: 0.88rem; color: #285e61; line-height: 1.6; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+  .summary-item { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .summary-item h3 { font-size: 0.82rem; color: #4a5568; margin-bottom: 7px; font-weight: 600; }
+  .summary-item p { font-size: 0.85rem; color: #2d3748; line-height: 1.5; }
+
+  /* ─── Chart ─── */
+  .section-title { font-size: 1rem; font-weight: 700; color: #2d3748; margin-bottom: 14px; padding-bottom: 7px; border-bottom: 2px solid #e2e8f0; }
+  .chart-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 24px; }
+  .chart-card h3 { font-size: 0.85rem; font-weight: 700; color: #4a5568; margin-bottom: 14px; }
+  .chart-container { position: relative; height: 280px; }
+
+  /* ─── Timeline ─── */
+  .timeline { display: flex; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 24px; }
+  .tl-phase { flex: 1; padding: 18px 14px; border-right: 1px dashed #e2e8f0; }
+  .tl-phase:last-child { border-right: none; }
+  .tl-month { font-size: 0.7rem; color: #718096; font-weight: 600; margin-bottom: 3px; }
+  .tl-title { font-size: 0.85rem; font-weight: 700; color: #2d3748; margin-bottom: 5px; }
+  .tl-desc { font-size: 0.77rem; color: #718096; line-height: 1.5; }
+  .tl-phase.active { background: #ebf8ff; }
+  .tl-phase.done { background: #f0fff4; }
+
+  /* ─── Warning ─── */
+  .warning-box { background: #fff5f5; border: 1px solid #fc8181; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; }
+  .warning-box h4 { color: #c53030; font-size: 0.9rem; margin-bottom: 6px; }
+  .warning-box ul { padding-left: 18px; }
+  .warning-box ul li { font-size: 0.8rem; color: #742a2a; margin-bottom: 3px; line-height: 1.5; }
+
+  .footer { text-align: center; color: #a0aec0; font-size: 0.75rem; margin-top: 32px; padding-bottom: 32px; }
+
+  @media (max-width: 768px) {
+    .input-sections { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .summary-grid { grid-template-columns: 1fr; }
+    .timeline { flex-direction: column; }
+    .tl-phase { border-right: none; border-bottom: 1px dashed #e2e8f0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 วิเคราะห์การปิดหนี้สินเชื่อบ้าน</h1>
+  <p>Interactive Version · แก้ไขยอดหนี้ปัจจุบันได้ทุกเดือน แล้วกด "คำนวณใหม่"</p>
+</div>
+
+<div class="container">
+
+  <!-- ─── INPUT PANEL ─── -->
+  <div class="input-panel">
+    <div class="input-panel-title">⚙️ ตั้งค่าข้อมูลสินเชื่อ — แก้ไขได้ทุกเดือน</div>
+    <div class="input-sections">
+
+      <div class="input-group">
+        <div class="input-group-title l1">🟢 สินเชื่อบ้าน (ดอกเบี้ยพนักงาน)</div>
+        <div class="field">
+          <label>ยอดเงินต้นคงเหลือ (บาท)</label>
+          <input type="number" id="in_b1" value="1090737.67" step="1">
+        </div>
+        <div class="field">
+          <label>อัตราดอกเบี้ย (% ต่อปี)</label>
+          <input type="number" id="in_r1" value="0.0707108" step="0.0001">
+        </div>
+        <div class="field">
+          <label>ยอดผ่อนขั้นต่ำ/เดือน (บาท)</label>
+          <input type="number" id="in_p1" value="4700" step="100">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div class="input-group-title misc">🟣 ตั้งค่าทั่วไป</div>
+        <div class="field">
+          <label>เงินโปะเพิ่มต่อเดือน (บาท)</label>
+          <input type="number" id="in_extra" value="30000" step="1000">
+        </div>
+      </div>
+
+    </div>
+    <button class="calc-btn" onclick="runAll()">🔄 คำนวณใหม่</button>
+  </div>
+
+  <!-- ─── KPI ─── -->
+  <div class="kpi-grid">
+    <div class="kpi loan1"><div class="kpi-label">สินเชื่อบ้าน</div><div class="kpi-value" id="kpi_b1">—</div><div class="kpi-sub" id="kpi_b1_sub">—</div></div>
+    <div class="kpi total"><div class="kpi-label">ยอดหนี้รวม</div><div class="kpi-value" id="kpi_total">—</div><div class="kpi-sub">บาท คงเหลือทั้งสิ้น</div></div>
+    <div class="kpi budget"><div class="kpi-label">งบโปะต่อเดือน</div><div class="kpi-value" id="kpi_budget">—</div><div class="kpi-sub" id="kpi_budget_sub">—</div></div>
+  </div>
+
+  <!-- ─── Summary ─── -->
+  <div class="summary-box">
+    <h2>📋 สรุปแผนการปิดหนี้ <span id="sum_badge" style="background:#38b2ac;color:white;padding:2px 9px;border-radius:20px;font-size:0.75rem;font-weight:700;">CALCULATED</span></h2>
+    <p id="sum_desc"></p>
+    <div class="summary-grid">
+      <div class="summary-item"><h3>📅 ระยะเวลาปิดหนี้</h3><p id="sum_months">—</p></div>
+      <div class="summary-item"><h3>💰 ดอกเบี้ยรวมทั้งหมด</h3><p id="sum_interest">—</p></div>
+    </div>
+  </div>
+
+  <!-- ─── Info box ─── -->
+  <div class="info-box">
+    <strong>💡 ข้อมูลสินเชื่อ:</strong>
+    <p id="insight_text"></p>
+  </div>
+
+  <!-- ─── Chart ─── -->
+  <div class="section-title">📉 ยอดหนี้คงเหลือตามเวลา</div>
+  <div class="chart-card">
+    <h3 id="ch_title">ยอดหนี้สินเชื่อบ้าน</h3>
+    <div class="chart-container"><canvas id="chartMain"></canvas></div>
+  </div>
+
+  <!-- ─── Timeline ─── -->
+  <div class="section-title">🗓️ Timeline การปิดหนี้</div>
+  <div class="timeline" id="timeline"></div>
+
+  <!-- ─── Warning ─── -->
+  <div class="warning-box">
+    <h4>❗ สิ่งที่ต้องตรวจสอบเพิ่มเติมกับธนาคาร/นายจ้าง</h4>
+    <ul>
+      <li><strong>เงื่อนไขการปิดสินเชื่อก่อนกำหนด:</strong> มีค่าธรรมเนียม Prepayment Fee หรือไม่?</li>
+      <li><strong>สิทธิ์ดอกเบี้ยพนักงาน:</strong> ยังคงอยู่หรือไม่หากลาออกหรือเปลี่ยนงาน?</li>
+      <li><strong>อัตราดอกเบี้ยตลาดที่แท้จริง:</strong> หากสิทธิ์พนักงานสิ้นสุด จะเป็นเท่าไหร่?</li>
+      <li><strong>Refinancing Option:</strong> มีตัวเลือกรีไฟแนนซ์ที่ดีกว่าหรือไม่?</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    Interactive Version · วิเคราะห์โดย Claude · คำนวณทั้งหมดใน Browser ไม่มีข้อมูลส่งออกไปที่ใด<br>
+    ข้อมูลนี้เพื่อประกอบการตัดสินใจ ควรปรึกษาที่ปรึกษาการเงินก่อนดำเนินการ
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// SIMULATION ENGINE (Single Loan)
+// ─────────────────────────────────────────────
+function simulate(balance, annualRate, minPayment, extraPayment) {
+  balance = parseFloat(balance);
+  const r_m = annualRate / 100 / 12;
+  let totalInt = 0;
+  const data = [];
+
+  for (let month = 1; month <= 600; month++) {
+    if (balance <= 0.5) break;
+
+    const interest = balance * r_m;
+    totalInt += interest;
+
+    const totalPay = Math.min(balance + interest, minPayment + extraPayment);
+    balance = Math.max(0, balance + interest - totalPay);
+    data.push({ month, balance, interest, payment: totalPay });
+  }
+
+  return { months: data.length > 0 ? data[data.length-1].month : 0, totalInt, data };
+}
+
+// ─────────────────────────────────────────────
+// CHART INSTANCE
+// ─────────────────────────────────────────────
+let chartMain = null;
+
+function fmt(n) { return Math.round(n).toLocaleString('th'); }
+
+function makeLineConfig(labels, datasets, yLabel='ยอดหนี้ (พันบาท)') {
+  return {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, usePointStyle: true, boxWidth: 10 } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label}: ${parseFloat(c.raw).toLocaleString('th', {maximumFractionDigits:0})}K ฿` } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'เดือน', font: { size: 10 } }, grid: { display: false },
+             ticks: { maxTicksLimit: 12, font: { size: 10 } } },
+        y: { title: { display: true, text: yLabel, font: { size: 10 } }, min: 0,
+             ticks: { callback: v => v.toLocaleString('th', {maximumFractionDigits:0}) + 'K', font: { size: 10 } } }
+      }
+    }
+  };
+}
+
+// ─────────────────────────────────────────────
+// MAIN RUNNER
+// ─────────────────────────────────────────────
+function runAll() {
+  const b1     = parseFloat(document.getElementById('in_b1').value)    || 0;
+  const r1     = parseFloat(document.getElementById('in_r1').value)    || 0;
+  const p1     = parseFloat(document.getElementById('in_p1').value)    || 0;
+  const extra  = parseFloat(document.getElementById('in_extra').value) || 0;
+
+  // ── Run simulation ──
+  const result = simulate(b1, r1, p1, extra);
+
+  // ── KPIs ──
+  const r1_m = r1 / 100 / 12;
+  document.getElementById('kpi_b1').textContent      = fmt(b1);
+  document.getElementById('kpi_b1_sub').textContent  = `ดอกเบี้ย ${r1.toFixed(4)}% ต่อปี  (~${fmt(b1*r1_m)} ฿/เดือน)`;
+  document.getElementById('kpi_total').textContent   = fmt(b1);
+  document.getElementById('kpi_budget').textContent  = fmt(p1 + extra);
+  document.getElementById('kpi_budget_sub').textContent = `${fmt(p1)} ขั้นต่ำ + ${fmt(extra)} โปะ`;
+
+  // ── Summary ──
+  const years = Math.floor(result.months / 12);
+  const months = result.months % 12;
+  document.getElementById('sum_desc').textContent =
+    `ด้วยยอดหนี้ ${fmt(b1)} บาท ดอกเบี้ย ${r1.toFixed(4)}% ต่อปี ผ่อนขั้นต่ำ ${fmt(p1)} บาท/เดือน ` +
+    `และโปะเพิ่ม ${fmt(extra)} บาท/เดือน จะปิดหนี้ได้ภายใน ${result.months} เดือน ` +
+    `(${years} ปี ${months} เดือน) ด้วยดอกเบี้ยรวม ${fmt(result.totalInt)} บาท`;
+
+  document.getElementById('sum_months').textContent =
+    `${result.months} เดือน (${years} ปี ${months} เดือน)`;
+  document.getElementById('sum_interest').textContent =
+    `${fmt(result.totalInt)} บาท`;
+
+  // ── Insight ──
+  document.getElementById('insight_text').innerHTML =
+    `สินเชื่อดอกเบี้ย <strong>${r1.toFixed(4)}% ต่อปี</strong> ต่ำมาก (ดอกเบี้ยเพียง ~${fmt(b1*r1_m)} บาท/เดือน) ` +
+    `การโปะเพิ่ม ${fmt(extra)} บาท/เดือน จะช่วยประหยัดดอกเบี้ยและปิดหนี้ได้เร็วขึ้น ` +
+    `จาก ${result.months} เดือน เป็นเพียง ${result.months} เดือน`;
+
+  // ── Timeline ──
+  const halfway = result.data[Math.floor(result.data.length / 2)];
+  document.getElementById('timeline').innerHTML = `
+    <div class="tl-phase active">
+      <div class="tl-month">เดือนที่ 1–${result.months}</div>
+      <div class="tl-title">📌 ช่วงโปะหนี้</div>
+      <div class="tl-desc">จ่าย ${fmt(p1+extra)} บาท/เดือน<br>ขั้นต่ำ ${fmt(p1)} + โปะ ${fmt(extra)}</div>
+    </div>
+    ${halfway ? `
+    <div class="tl-phase">
+      <div class="tl-month">เดือนที่ ${halfway.month}</div>
+      <div class="tl-title">📍 จุดกึ่งกลาง</div>
+      <div class="tl-desc">หนี้คงเหลือ ~${fmt(halfway.balance)} บาท<br>(${((halfway.balance/b1)*100).toFixed(1)}% ของต้น)</div>
+    </div>` : ''}
+    <div class="tl-phase done">
+      <div class="tl-month">เดือนที่ ${result.months}</div>
+      <div class="tl-title" style="color:#276749">🎉 ปลอดหนี้!</div>
+      <div class="tl-desc">${years} ปี ${months} เดือน<br>ดอกเบี้ยรวม ~${fmt(result.totalInt)} บาท</div>
+    </div>`;
+
+  // ── Chart ──
+  function thinData(data, key, step) {
+    const result = [];
+    for (let i = 0; i < data.length; i += step) result.push(data[i][key] / 1000);
+    return result;
+  }
+  function thinLabels(data, step) {
+    const result = [];
+    for (let i = 0; i < data.length; i += step) result.push(data[i].month);
+    return result;
+  }
+
+  const step = Math.max(1, Math.ceil(result.data.length / 55));
+  const labels = thinLabels(result.data, step);
+  const balanceData = thinData(result.data, 'balance', step);
+
+  if (chartMain) chartMain.destroy();
+  chartMain = new Chart(document.getElementById('chartMain'), makeLineConfig(
+    labels,
+    [
+      { label: 'ยอดหนี้คงเหลือ', data: balanceData, borderColor: '#38a169', backgroundColor: 'rgba(56,161,105,0.12)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2.5 }
+    ]
+  ));
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+window.addEventListener('load', runAll);
+
+// Allow Enter key to trigger recalc
+document.addEventListener('keydown', e => { if (e.key === 'Enter') runAll(); });
+</script>
+</body>
+</html>
